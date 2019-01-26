@@ -1,4 +1,8 @@
 from datetime import datetime
+import pandas as pd
+import pandasql
+import numpy as np
+sql = pandasql.PandaSQL()
 
 fieldOrder = [
                 'address',
@@ -48,15 +52,21 @@ def parseLine(line):
   # convert timestamp string into a useful data type
   obj['timestamp'] = datetime.strptime(obj['timestamp'], "%d/%b/%Y:%H:%M:%S %z")
 
+  # convert timestamp back to a sql format
+  obj['timestamp'] = obj['timestamp'].strftime("%Y-%m-%d %H:%M:%S")  
 
   # todo: instead of creating objects we could instead utilise pandaSQL so that we can easily use SQL over our parsed data
   return obj
 
-# todo: input log file
-filename = "C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.log-20181002\\ssl-access.log-20181002"
-file = open(filename, "r")
-data = []
-for line in file:
-  data.append(parseLine(line))
+def parseFileIntoDatabase(path):
+  file = open(path, "r")
+  data = []
+  for line in file:
+    data.append(parseLine(line))
 
-print(data)
+  dataframe = pd.DataFrame(data)
+  return dataframe
+
+data = parseFileIntoDatabase("C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.log-20181002\\ssl-access.log-20181002")
+# now we can directly use SQL to collect data
+print(sql('select * from data where address like "213.%%"')) # %% is a single % which is wild card in sql
