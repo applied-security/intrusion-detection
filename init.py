@@ -4,7 +4,6 @@ import pandasql
 import numpy as np
 sql = pandasql.PandaSQL()
 
-# request gets replaced into method
 fieldOrder = [
                 'address',            # ip address
                 'unknown_field_1',    # usually empty
