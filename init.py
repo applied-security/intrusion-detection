@@ -81,3 +81,7 @@ data = parseFileIntoDatabase("C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.
 
 # print(sql('select * from data where address like "213.%%"')) # %% is a single % which is wild card in sql
 print(filterRequestsWithNoUserAgent(data))
+
+
+# todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
+# we can check if user agents of yandex bots are legitmate yandex bots and not someone just using the Yandex User-Agent
