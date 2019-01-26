@@ -22,8 +22,8 @@ def parseLine(line):
   # first tokenise by spaces
   obj = {}
   field_count = 0
-  in_block = False
-  in_escape = False
+  in_block = False   # block is considered anything within quotes or square brackets
+  in_escape = False  # next character is escaped, e.g. the text we see is literally \"
 
   current_token = ""
   for character in line:
