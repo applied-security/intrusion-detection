@@ -66,6 +66,15 @@ def parseFileIntoDatabase(path):
   dataframe = pd.DataFrame(data)
   return dataframe
 
+def filterRequestsWithNoUserAgent(data):
+  return sql('select * from data where user_agent = "-"')
+
+def filterRequestsWithNoReferrer(data):
+  return sql('select * from data where referrer = "-"')
+
+
 data = parseFileIntoDatabase("C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.log-20181002\\ssl-access.log-20181002")
 # now we can directly use SQL to collect data
-print(sql('select * from data where address like "213.%%"')) # %% is a single % which is wild card in sql
+
+# print(sql('select * from data where address like "213.%%"')) # %% is a single % which is wild card in sql
+print(filterRequestsWithNoUserAgent(data))
