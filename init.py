@@ -4,18 +4,22 @@ import pandasql
 import numpy as np
 sql = pandasql.PandaSQL()
 
+# request gets replaced into method
 fieldOrder = [
-                'address',
-                'unknown_field_1',
-                'unknown_field_2',
-                'timestamp',
-                'request',
-                'response_code',
-                'unknown_field_3',
-                'referrer',
+                'address',            # ip address
+                'unknown_field_1',    # usually empty
+                'unknown_field_2',    # usually empty
+                'timestamp',          # time of request
+                'request',            # this field gets replaced into 3 fields
+                                      #    'method'   e.g. GET
+                                      #    'url'      e.g. /article1.html
+                                      #    'protocol' e.g. HTTP/1.1
+                'response_code',      # e.g. 404
+                'unknown_field_3',    # some sort of code
+                'referrer',           # e.g. "https://www.doc.ic.ac.uk/"
                 'user_agent',
-                'tls',
-                'unknown_field_4'
+                'tls',                # e.g. TLSv1.2
+                'unknown_field_4'     # something to do with encryption e.g. ECDHE-RSA-AES128-GCM-SHA256
               ]
 
 def parseLine(line):
