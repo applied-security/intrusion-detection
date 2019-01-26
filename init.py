@@ -55,7 +55,6 @@ def parseLine(line):
   # convert timestamp back to a sql format
   obj['timestamp'] = obj['timestamp'].strftime("%Y-%m-%d %H:%M:%S")  
 
-  # todo: instead of creating objects we could instead utilise pandaSQL so that we can easily use SQL over our parsed data
   return obj
 
 def parseFileIntoDatabase(path):
