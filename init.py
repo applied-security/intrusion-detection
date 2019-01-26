@@ -8,7 +8,9 @@ fieldOrder = [
                 'address',            # ip address
                 'unknown_field_1',    # usually empty
                 'unknown_field_2',    # usually empty
-                'timestamp',          # time of request
+                'timestamp',          # this gets split into 2 fields
+                                      #    'day'    %Y-%m-%d
+                                      #    'time'   %H:%M:%S
                 'request',            # this field gets replaced into 3 fields
                                       #    'method'   e.g. GET
                                       #    'url'      e.g. /article1.html
@@ -56,7 +58,10 @@ def parseLine(line):
   obj['timestamp'] = datetime.strptime(obj['timestamp'], "%d/%b/%Y:%H:%M:%S %z")
 
   # convert timestamp back to a sql format
-  obj['timestamp'] = obj['timestamp'].strftime("%Y-%m-%d %H:%M:%S")  
+  obj['day'] = obj['timestamp'].strftime("%Y-%m-%d")
+  obj['time'] = obj['timestamp'].strftime("%H:%M:%S")
+
+  del obj['timestamp']
 
   return obj
 
@@ -75,13 +80,18 @@ def filterRequestsWithNoUserAgent(data):
 def filterRequestsWithNoReferrer(data):
   return sql('select * from data where referrer = "-"')
 
+def calculateTotalRequestsPerDay(data):
+  return sql('select count(*) as requests, day from data group by day')
 
+def calculateAverageRequestsPerDay(data):
+  number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
+  return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
+
+
+# todo: combine the log files together, either by loading them one by one or some other way
 data = parseFileIntoDatabase("C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.log-20181002\\ssl-access.log-20181002")
 # now we can directly use SQL to collect data
-
-# print(sql('select * from data where address like "213.%%"')) # %% is a single % which is wild card in sql
-print(filterRequestsWithNoUserAgent(data))
-
+print(calculateAverageRequestsPerDay(data))
 
 # todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
 # we can check if user agents of yandex bots are legitmate yandex bots and not someone just using the Yandex User-Agent
