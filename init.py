@@ -70,10 +70,10 @@ def parse_line(line):
   obj['day'] = obj['timestamp'].strftime("%Y-%m-%d")
   obj['time'] = obj['timestamp'].strftime("%H:%M:%S")
 
-  del obj['timestamp']
 
 
   # NOTE: we are removing unknown or useless fields since it takes up much memory
+  del obj['timestamp']
   del obj['unknown_field_1']
   del obj['unknown_field_2']
   del obj['unknown_field_3']
@@ -110,7 +110,7 @@ def parse_files_into_database(root):
     # dataframe_collection = dataframe_collection.append(new_dataframe, ignore_index=True)
     dataframe_collection = pd.concat([dataframe_collection, new_dataframe], ignore_index=True)
 
-  print("[+] " + str(number_of_files) + "Access logs loaded!")
+  print("[+] " + str(number_of_files) + " access logs loaded!")
   return dataframe_collection
 
 def filter_requests_with_no_useragent(data):
@@ -128,7 +128,7 @@ def calculate_average_requests_per_day(data):
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
 
 
-
+# a good idea would be to only have a few log files when testing / developing for quick feedback
 data = parse_files_into_database("C:\\Users\\Rogue\\Downloads\\ssl-logs")
 print(filter_requests_with_no_useragent(data))
 
