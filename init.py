@@ -122,7 +122,6 @@ def filter_requests_with_no_referrer(data):
 def calculate_total_requests_per_day(data):
   return sql('select count(*) as requests, day from data group by day')
 
-# todo: this is quite meaningless without loading data for a months worth
 def calculate_average_requests_per_day(data):
   number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
