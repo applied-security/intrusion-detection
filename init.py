@@ -2,9 +2,11 @@ from datetime import datetime
 import pandas as pd
 import pandasql
 import numpy as np
+import os
+from tqdm import tqdm
 sql = pandasql.PandaSQL()
 
-fieldOrder = [
+field_order = [
                 'address',            # ip address
                 'unknown_field_1',    # usually empty
                 'unknown_field_2',    # usually empty
@@ -23,23 +25,30 @@ fieldOrder = [
                 'unknown_field_4'     # something to do with encryption e.g. ECDHE-RSA-AES128-GCM-SHA256
               ]
 
-def parseLine(line):
+def parse_line(line):
   # first tokenise by spaces
   obj = {}
   field_count = 0
-  in_block = False   # block is considered anything within quotes or square brackets
+  block_count = 0   # block is considered anything within quotes or square brackets
   in_escape = False  # next character is escaped, e.g. the text we see is literally \"
-
   current_token = ""
-  for character in line:
 
+  # checking for blocks of strings with whitespace is a hack
+  for character in line:
     will_escape = False
     if character == "\\" and not in_escape:
       will_escape = True
-    elif (character == "\"" or character == "[" or character == "]") and not in_escape:
-      in_block = not in_block
-    elif character == " " and not in_block:
-      obj[fieldOrder[field_count]] = current_token
+    elif character == "\"" and not in_escape: 
+      if block_count > 0:
+        block_count -= 1
+      else:
+        block_count += 1
+    elif character == "[" and not in_escape:
+      block_count += 1
+    elif character == "]" and not in_escape and block_count > 0:
+      block_count -= 1
+    elif character == " " and block_count == 0:
+      obj[field_order[field_count]] = current_token
       current_token = ""
       field_count += 1
     else:
@@ -63,36 +72,65 @@ def parseLine(line):
 
   del obj['timestamp']
 
+
+  # NOTE: we are removing unknown or useless fields since it takes up much memory
+  del obj['unknown_field_1']
+  del obj['unknown_field_2']
+  del obj['unknown_field_3']
+  del obj['unknown_field_4']
   return obj
 
-def parseFileIntoDatabase(path):
+def parse_file_into_objects(path):
   file = open(path, "r")
   data = []
   for line in file:
-    data.append(parseLine(line))
+    data.append(parse_line(line))
+  return data
 
-  dataframe = pd.DataFrame(data)
-  return dataframe
+def find_all_access_logs(root):
+  access_logs = []
+  for root, dirs, files in os.walk(root):
+    for file in files:
+      if "ssl-access.log" in file and ".gz" not in file:
+         access_logs.append(os.path.join(root, file))
 
-def filterRequestsWithNoUserAgent(data):
+  return access_logs
+
+def parse_files_into_database(root):
+  files = find_all_access_logs(root)
+  number_of_files = len(files)
+  print("[+] Found " + str(number_of_files) + " access logs!")
+  print("[~] Loading files..")
+
+  dataframe_collection = pd.DataFrame()
+  for i in tqdm(range(number_of_files)):
+    file = files[i]
+
+    new_dataframe = pd.DataFrame(parse_file_into_objects(file))
+    # dataframe_collection = dataframe_collection.append(new_dataframe, ignore_index=True)
+    dataframe_collection = pd.concat([dataframe_collection, new_dataframe], ignore_index=True)
+
+  print("[+] " + str(number_of_files) + "Access logs loaded!")
+  return dataframe_collection
+
+def filter_requests_with_no_useragent(data):
   return sql('select * from data where user_agent = "-"')
 
-def filterRequestsWithNoReferrer(data):
+def filter_requests_with_no_referrer(data):
   return sql('select * from data where referrer = "-"')
 
-def calculateTotalRequestsPerDay(data):
+def calculate_total_requests_per_day(data):
   return sql('select count(*) as requests, day from data group by day')
 
 # todo: this is quite meaningless without loading data for a months worth
-def calculateAverageRequestsPerDay(data):
+def calculate_average_requests_per_day(data):
   number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
 
 
-# todo: combine the log files together, either by loading them one by one or some other way
-data = parseFileIntoDatabase("C:\\Users\\Rogue\\Downloads\\ssl-logs\\ssl-access.log-20181002\\ssl-access.log-20181002")
-# now we can directly use SQL to collect data
-print(calculateAverageRequestsPerDay(data))
+
+data = parse_files_into_database("C:\\Users\\Rogue\\Downloads\\ssl-logs")
+print(filter_requests_with_no_useragent(data))
 
 # todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
 # we can check if user agents of yandex bots are legitmate yandex bots and not someone just using the Yandex User-Agent
