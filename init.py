@@ -100,7 +100,7 @@ def parse_files_into_database(root):
   files = find_all_access_logs(root)
   number_of_files = len(files)
   print("[+] Found " + str(number_of_files) + " access logs!")
-  print("[~] Loading files..")
+  print("[~] Loading access logs..")
 
   dataframe_collection = pd.DataFrame()
   for i in tqdm(range(number_of_files)):
