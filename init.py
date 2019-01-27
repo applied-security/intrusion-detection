@@ -57,7 +57,7 @@ def parse_line(line):
 
   # now fine grain the tokens
   request_tokens = obj['request'].split(" ")
-  if len(request_tokens) == 2:
+  if len(request_tokens) == 3:
     obj['method'] = request_tokens[0]
     obj['url'] = request_tokens[1]
     obj['protocol'] = request_tokens[2]
@@ -129,7 +129,7 @@ def calculate_average_requests_per_day(data):
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
-data = parse_files_into_database("C:\\Users\\Rogue\\Downloads\\ssl-logs")
+data = parse_files_into_database("/homes/ih1115/ssl-logs/")
 print(filter_requests_with_no_useragent(data))
 
 # todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
