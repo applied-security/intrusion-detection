@@ -129,6 +129,7 @@ def calculate_average_requests_per_day(data):
 
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
+# if memory error, consider using 64 bit version of python or buy more ram :)
 data = parse_files_into_database("C:\\Users\\Rogue\\Downloads\\ssl-logs")
 print(filter_requests_with_no_useragent(data))
 
