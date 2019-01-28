@@ -152,7 +152,7 @@ def fetch_blacklisted_addresses():
     blacklist = blacklist + fetch_blacklisted_addresses_from(url)
 
   print('[+] Fetched ' + str(len(blacklist)) + ' blacklisted addresses')
-  return pd.DataFrame(blacklist)
+  return pd.DataFrame(list(set(blacklist))) # first removes duplicates by using set
 
 
 
