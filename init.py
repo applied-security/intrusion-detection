@@ -3,6 +3,7 @@ import pandas as pd
 import pandasql
 import numpy as np
 import os
+import socket
 from tqdm import tqdm
 sql = pandasql.PandaSQL()
 
@@ -126,13 +127,20 @@ def calculate_average_requests_per_day(data):
   number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
 
+def filter_requests_by_yandex_useragent(data):
+  return sql('select * from data where user_agent like "%%yandex%%"')
+
+# finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
+def filter_fake_yandex_bots(data):
+  yandex_requests = filter_requests_by_yandex_useragent(data)
+  for index, row in yandex_requests.iterrows():
+    if "yandex" in socket.gethostbyaddr(row["address"])[0]:
+      # we are only keeping the bad ones
+      yandex_requests.drop(index, inplace=True)
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 data = parse_files_into_database("/homes/ih1115/ssl-logs/")
-filter_requests_with_no_useragent(data).to_csv('useragent.csv', index=False)
-filter_requests_with_no_referrer(data).to_csv('referrer.csv', index=False)
-
-
-# todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
-# we can check if user agents of yandex bots are legitmate yandex bots and not someone just using the Yandex User-Agent
+filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
+filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
