@@ -166,6 +166,8 @@ def filter_requests_by_yandex_useragent(data):
   return sql('select * from data where user_agent like "%%yandex%%"')
 
 # finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
+# optimise: use a transposition table (fixed size hash table), a single ip address occur many times
+# optimise: E.G. convert ip address to hex and then perform (HEX % 20000) to check before you calculate the index of the array to cache it in
 def filter_fake_yandex_bots(data):
   yandex_requests = filter_requests_by_yandex_useragent(data)
   for index, row in yandex_requests.iterrows():
@@ -175,8 +177,9 @@ def filter_fake_yandex_bots(data):
         yandex_requests.drop(index, inplace=True)
     except:
       # if we fail then the ip address prolly invalid so just drop it?
-      print("[!] What kind of ip address is this .. " + row["address"])
+      print("[!] Could not resolve (" + row["address"] + '), ignoring..')
       yandex_requests.drop(index, inplace=True)
+  return yandex_requests
 
 def filter_blacklisted_addresses(data, blacklist):
   return sql('select * from data where address in (select address from blacklist)')
