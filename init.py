@@ -130,7 +130,9 @@ def calculate_average_requests_per_day(data):
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 data = parse_files_into_database("/homes/ih1115/ssl-logs/")
-print(filter_requests_with_no_useragent(data))
+filter_requests_with_no_useragent(data).to_csv('useragent.csv', index=False)
+filter_requests_with_no_referrer(data).to_csv('referrer.csv', index=False)
+
 
 # todo: https://security.stackexchange.com/questions/122692/should-i-block-the-yandex-bot
 # we can check if user agents of yandex bots are legitmate yandex bots and not someone just using the Yandex User-Agent
