@@ -4,6 +4,7 @@ import pandasql
 import numpy as np
 import os
 import socket
+from urllib.request import Request, urlopen
 from tqdm import tqdm
 sql = pandasql.PandaSQL()
 
@@ -105,18 +106,17 @@ def parse_file_into_objects(path):
   return data
 
 def find_all_access_logs(root):
+  print('[~] Looking for access logs..')
   access_logs = []
   for root, dirs, files in os.walk(root):
     for file in files:
       if "ssl-access.log" in file and ".gz" not in file:
          access_logs.append(os.path.join(root, file))
-
+  print("[+] Found " + str(len(access_logs)) + " access logs!")
   return access_logs
 
-def parse_files_into_database(root):
-  files = find_all_access_logs(root)
+def load_access_logs(files):
   number_of_files = len(files)
-  print("[+] Found " + str(number_of_files) + " access logs!")
   print("[~] Loading access logs..")
 
   dataframe_collection = pd.DataFrame()
@@ -124,11 +124,30 @@ def parse_files_into_database(root):
     file = files[i]
 
     new_dataframe = pd.DataFrame(parse_file_into_objects(file))
-    # dataframe_collection = dataframe_collection.append(new_dataframe, ignore_index=True)
     dataframe_collection = pd.concat([dataframe_collection, new_dataframe], ignore_index=True)
 
   print("[+] " + str(number_of_files) + " access logs loaded!")
   return dataframe_collection
+
+def parse_files_into_database(root):
+  files = find_all_access_logs(root)
+  return load_access_logs(files)
+
+def fetch_blacklisted_addresses():
+  # todo: collect black list from all sources defined in BLACKLIST_IP_SOURCE_URLS
+  blacklist = []
+  print('[~] Fetching blacklisted addresses from ' + BLACKLIST_IP_SOURCE_URLS[10])
+  request = Request(BLACKLIST_IP_SOURCE_URLS[10], headers={'User-Agent': 'Mozilla/5.0'})
+  contents = urlopen(request).read().decode('utf-8')
+  lines = contents.split('\n')
+  for line in lines:
+    # ignore comments and empty lines
+    if "//" in line or line == "":
+      continue
+    blacklist.append({'address': line.strip()})
+  print('[+] Fetched ' + str(len(blacklist)) + ' blacklisted addresses')
+  return pd.DataFrame(blacklist)
+
 
 def filter_requests_with_no_useragent(data):
   return sql('select * from data where user_agent = "-"')
@@ -154,9 +173,14 @@ def filter_fake_yandex_bots(data):
       # we are only keeping the bad ones
       yandex_requests.drop(index, inplace=True)
 
+def filter_blacklisted_addresses(data, blacklist):
+  return sql('select * from data where address in (select address from blacklist)')
+
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
+blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("/home/ih1115/ssl-logs/")
+filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
 filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
