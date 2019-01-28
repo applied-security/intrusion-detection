@@ -30,9 +30,9 @@ FIELD_ORDER = [
 # urls to gather blacklisted ip address - https://github.com/jgamblin/isthisipbad/blob/master/isthisipbad.py
 BLACKLIST_IP_SOURCE_URLS = [
                               # 'http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv',    # TOR
-                              # 'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # EmergingThreats
+                              'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # EmergingThreats
                               # 'http://reputation.alienvault.com/reputation.data',                       # AlienVault
-                              # 'http://www.blocklist.de/lists/bruteforcelogin.txt',                      # BlocklistDE
+                              'http://www.blocklist.de/lists/bruteforcelogin.txt',                      # BlocklistDE
                               # 'http://dragonresearchgroup.org/insight/sshpwauth.txt',                   # Dragon Research Group - SSH
                               # 'http://dragonresearchgroup.org/insight/vncprobe.txt',                    # Dragon Research Group - VNC
                               # 'http://www.nothink.org/blacklist/blacklist_malware_http.txt',            # NoThinkMalware
