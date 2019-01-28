@@ -87,8 +87,6 @@ def parse_line(line):
   obj['day'] = obj['timestamp'].strftime("%Y-%m-%d")
   obj['time'] = obj['timestamp'].strftime("%H:%M:%S")
 
-
-
   # NOTE: we are removing unknown or useless fields since it takes up much memory
   del obj['timestamp']
   del obj['unknown_field_1']
@@ -153,8 +151,6 @@ def fetch_blacklisted_addresses():
 
   print('[+] Fetched ' + str(len(blacklist)) + ' blacklisted addresses')
   return pd.DataFrame({'address': list(set(blacklist))}) # first removes duplicates by using set
-
-
 
 def filter_requests_with_no_useragent(data):
   return sql('select * from data where user_agent = "-"')
