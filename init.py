@@ -36,7 +36,6 @@ BLACKLIST_IP_SOURCE_URLS = [
                               # 'http://dragonresearchgroup.org/insight/sshpwauth.txt',                   # Dragon Research Group - SSH
                               # 'http://dragonresearchgroup.org/insight/vncprobe.txt',                    # Dragon Research Group - VNC
                               # 'http://www.nothink.org/blacklist/blacklist_malware_http.txt',            # NoThinkMalware
-                              'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # Feodo
                               # 'http://antispam.imp.ch/spamlist',                                        # antispam.imp.ch
                               # 'http://www.dshield.org/ipsascii.html?limit=10000',                       # dshield
                               'http://malc0de.com/bl/IP_Blacklist.txt'                                 # malc0de
