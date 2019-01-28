@@ -7,7 +7,7 @@ import socket
 from tqdm import tqdm
 sql = pandasql.PandaSQL()
 
-field_order = [
+FIELD_ORDER = [
                 'address',            # ip address
                 'unknown_field_1',    # usually empty
                 'unknown_field_2',    # usually empty
@@ -25,6 +25,22 @@ field_order = [
                 'tls',                # e.g. TLSv1.2
                 'unknown_field_4'     # something to do with encryption e.g. ECDHE-RSA-AES128-GCM-SHA256
               ]
+
+# urls to gather blacklisted ip address - https://github.com/jgamblin/isthisipbad/blob/master/isthisipbad.py
+BLACKLIST_IP_SOURCE_URLS = [
+                              'http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv',    # TOR
+                              'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # EmergingThreats
+                              'http://reputation.alienvault.com/reputation.data',                       # AlienVault
+                              'http://www.blocklist.de/lists/bruteforcelogin.txt',                      # BlocklistDE
+                              'http://dragonresearchgroup.org/insight/sshpwauth.txt',                   # Dragon Research Group - SSH
+                              'http://dragonresearchgroup.org/insight/vncprobe.txt',                    # Dragon Research Group - VNC
+                              'http://www.nothink.org/blacklist/blacklist_malware_http.txt',            # NoThinkMalware
+                              'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # Feodo
+                              'http://antispam.imp.ch/spamlist',                                        # antispam.imp.ch
+                              'http://www.dshield.org/ipsascii.html?limit=10000',                       # dshield
+                              'http://malc0de.com/bl/IP_Blacklist.txt',                                 # malc0de
+                              'http://hosts-file.net/rss.asp'                                           # MalWareBytes
+                           ]
 
 def parse_line(line):
   # first tokenise by spaces
@@ -49,7 +65,7 @@ def parse_line(line):
     elif character == "]" and not in_escape and block_count > 0:
       block_count -= 1
     elif character == " " and block_count == 0:
-      obj[field_order[field_count]] = current_token
+      obj[FIELD_ORDER[field_count]] = current_token
       current_token = ""
       field_count += 1
     else:
@@ -140,7 +156,7 @@ def filter_fake_yandex_bots(data):
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
-data = parse_files_into_database("/homes/ih1115/ssl-logs/")
+data = parse_files_into_database("/home/ih1115/ssl-logs/")
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
 filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
