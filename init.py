@@ -106,7 +106,7 @@ def parse_file_into_objects(path):
   return data
 
 def find_all_access_logs(root):
-  print('[~] Looking for access logs..')
+  print('[~] Looking for access logs in ' + root)
   access_logs = []
   for root, dirs, files in os.walk(root):
     for file in files:
@@ -179,7 +179,7 @@ def filter_blacklisted_addresses(data, blacklist):
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
-data = parse_files_into_database("/home/ih1115/ssl-logs/")
+data = parse_files_into_database("/homes/ih1115/ssl-logs/")
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
