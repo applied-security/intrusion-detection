@@ -169,8 +169,13 @@ def filter_requests_by_yandex_useragent(data):
 def filter_fake_yandex_bots(data):
   yandex_requests = filter_requests_by_yandex_useragent(data)
   for index, row in yandex_requests.iterrows():
-    if "yandex" in socket.gethostbyaddr(row["address"])[0]:
-      # we are only keeping the bad ones
+    try:
+      if "yandex" in socket.gethostbyaddr(row["address"])[0]:
+        # we are only keeping the bad ones
+        yandex_requests.drop(index, inplace=True)
+    except:
+      # if we fail then the ip address prolly invalid so just drop it?
+      print("[!] What kind of ip address is this .. " + row["address"])
       yandex_requests.drop(index, inplace=True)
 
 def filter_blacklisted_addresses(data, blacklist):
