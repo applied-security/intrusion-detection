@@ -29,18 +29,18 @@ FIELD_ORDER = [
 
 # urls to gather blacklisted ip address - https://github.com/jgamblin/isthisipbad/blob/master/isthisipbad.py
 BLACKLIST_IP_SOURCE_URLS = [
-                              'http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv',    # TOR
-                              'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # EmergingThreats
-                              'http://reputation.alienvault.com/reputation.data',                       # AlienVault
-                              'http://www.blocklist.de/lists/bruteforcelogin.txt',                      # BlocklistDE
-                              'http://dragonresearchgroup.org/insight/sshpwauth.txt',                   # Dragon Research Group - SSH
-                              'http://dragonresearchgroup.org/insight/vncprobe.txt',                    # Dragon Research Group - VNC
-                              'http://www.nothink.org/blacklist/blacklist_malware_http.txt',            # NoThinkMalware
+                              # 'http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv',    # TOR
+                              # 'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # EmergingThreats
+                              # 'http://reputation.alienvault.com/reputation.data',                       # AlienVault
+                              # 'http://www.blocklist.de/lists/bruteforcelogin.txt',                      # BlocklistDE
+                              # 'http://dragonresearchgroup.org/insight/sshpwauth.txt',                   # Dragon Research Group - SSH
+                              # 'http://dragonresearchgroup.org/insight/vncprobe.txt',                    # Dragon Research Group - VNC
+                              # 'http://www.nothink.org/blacklist/blacklist_malware_http.txt',            # NoThinkMalware
                               'http://rules.emergingthreats.net/blockrules/compromised-ips.txt',        # Feodo
-                              'http://antispam.imp.ch/spamlist',                                        # antispam.imp.ch
-                              'http://www.dshield.org/ipsascii.html?limit=10000',                       # dshield
-                              'http://malc0de.com/bl/IP_Blacklist.txt',                                 # malc0de
-                              'http://hosts-file.net/rss.asp'                                           # MalWareBytes
+                              # 'http://antispam.imp.ch/spamlist',                                        # antispam.imp.ch
+                              # 'http://www.dshield.org/ipsascii.html?limit=10000',                       # dshield
+                              'http://malc0de.com/bl/IP_Blacklist.txt'                                 # malc0de
+                              # 'http://hosts-file.net/rss.asp'                                           # MalWareBytes
                            ]
 
 def parse_line(line):
@@ -133,11 +133,10 @@ def parse_files_into_database(root):
   files = find_all_access_logs(root)
   return load_access_logs(files)
 
-def fetch_blacklisted_addresses():
-  # todo: collect black list from all sources defined in BLACKLIST_IP_SOURCE_URLS
+def fetch_blacklisted_addresses_from(url):
   blacklist = []
-  print('[~] Fetching blacklisted addresses from ' + BLACKLIST_IP_SOURCE_URLS[10])
-  request = Request(BLACKLIST_IP_SOURCE_URLS[10], headers={'User-Agent': 'Mozilla/5.0'})
+  print('[~] Fetching blacklisted addresses from ' + url)
+  request = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
   contents = urlopen(request).read().decode('utf-8')
   lines = contents.split('\n')
   for line in lines:
@@ -145,8 +144,17 @@ def fetch_blacklisted_addresses():
     if "//" in line or line == "":
       continue
     blacklist.append({'address': line.strip()})
+  return blacklist
+
+def fetch_blacklisted_addresses():
+  # todo: collect black list from all sources defined in BLACKLIST_IP_SOURCE_URLS
+  blacklist = []
+  for url in BLACKLIST_IP_SOURCE_URLS:
+    blacklist = blacklist + fetch_blacklisted_addresses_from(url)
+
   print('[+] Fetched ' + str(len(blacklist)) + ' blacklisted addresses')
   return pd.DataFrame(blacklist)
+
 
 
 def filter_requests_with_no_useragent(data):
@@ -177,8 +185,7 @@ def filter_fake_yandex_bots(data):
         yandex_requests.drop(index, inplace=True)
     except:
       # if we fail then the ip address prolly invalid so just drop it?
-      print("[!] Could not resolve (" + row["address"] + '), ignoring..')
-      yandex_requests.drop(index, inplace=True)
+      print("[!] Could not resolve (" + row["address"] + '), flagging!..')
   return yandex_requests
 
 def filter_blacklisted_addresses(data, blacklist):
