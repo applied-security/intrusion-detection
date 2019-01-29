@@ -10,8 +10,8 @@ sql = pandasql.PandaSQL()
 
 FIELD_ORDER = [
                 'address',            # ip address
-                'unknown_field_1',    # usually empty
-                'unknown_field_2',    # usually empty
+                'ident',              # client machine runs identd => id info
+                'authuser',           # token for Basic HTTP authentication
                 'timestamp',          # this gets split into 2 fields
                                       #    'day'    %Y-%m-%d
                                       #    'time'   %H:%M:%S
@@ -20,7 +20,7 @@ FIELD_ORDER = [
                                       #    'url'      e.g. /article1.html
                                       #    'protocol' e.g. HTTP/1.1
                 'response_code',      # e.g. 404
-                'unknown_field_3',    # some sort of code
+                'response_bytes',    # number of bytes returned
                 'referrer',           # e.g. "https://www.doc.ic.ac.uk/"
                 'user_agent',
                 'tls',                # e.g. TLSv1.2
@@ -55,7 +55,7 @@ def parse_line(line):
     will_escape = False
     if character == "\\" and not in_escape:
       will_escape = True
-    elif character == "\"" and not in_escape: 
+    elif character == "\"" and not in_escape:
       if block_count > 0:
         block_count -= 1
       else:
@@ -189,7 +189,7 @@ def filter_blacklisted_addresses(data, blacklist):
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
-data = parse_files_into_database("/homes/ih1115/ssl-logs/")
+data = parse_files_into_database("../ssl-logs/")
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
