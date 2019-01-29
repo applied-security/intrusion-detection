@@ -89,9 +89,9 @@ def parse_line(line):
 
   # NOTE: we are removing unknown or useless fields since it takes up much memory
   del obj['timestamp']
-  del obj['unknown_field_1']
-  del obj['unknown_field_2']
-  del obj['unknown_field_3']
+  del obj['ident']
+  del obj['authuser']
+  del obj['response_bytes']
   del obj['unknown_field_4']
   return obj
 
