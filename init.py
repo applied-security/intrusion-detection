@@ -186,10 +186,24 @@ def filter_fake_yandex_bots(data):
 def filter_blacklisted_addresses(data, blacklist):
   return sql('select * from data where address in (select address from blacklist)')
 
+# checks for any </...> patterns in the url and will add these to the file: 'possible_xss.csv'
+def filter_xss(data):
+    t1 = '((\%3C)|<)'    # checks for <
+    t2 = '((\%2F)|\/)*'  # checks for /
+    t3 = '[a-z0-9\%]+'   # checks for string in tag
+    t4 = '((\%3E)|>)'    # checks for >
+    reg = '.*' + t1 + t2 + t3 + t4 + '.*'
+    matches = []
+    for i, x in enumerate(data.url.str.match(reg)):
+        if x:
+            matches.append(data.iloc[i])
+    return pd.DataFrame(matches)
+
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("../ssl-logs/")
+filter_xss(data).to_csv('possible_xss.csv', index=False)
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
