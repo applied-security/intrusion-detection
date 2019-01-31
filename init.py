@@ -186,18 +186,32 @@ def filter_fake_yandex_bots(data):
 def filter_blacklisted_addresses(data, blacklist):
   return sql('select * from data where address in (select address from blacklist)')
 
-# checks for any </...> patterns in the url and will add these to the file: 'possible_xss.csv'
+# Takes the data variable, column to compare and an array of regex rules and returns
+# any records in data that match at least one of the rules
+def match_regex(data, column, rules):
+    tmp = [column.str.match(rule) for rule in rules]
+    matches = [[m[i] for m in tmp] for i in range(len(tmp[0]))]
+    result = []
+    i = 0
+    for i in range(len(matches)):
+        for m in matches[i]:
+            if m:
+                result.append(data.iloc[i])
+                break
+    return pd.DataFrame(result)
+
+# checks for any </...> patterns in the url and will add to the file: 'possible_xss.csv'
 def filter_xss(data):
     t1 = '((\%3C)|<)'    # checks for <
     t2 = '((\%2F)|\/)*'  # checks for /
     t3 = '[a-z0-9\%]+'   # checks for string in tag
     t4 = '((\%3E)|>)'    # checks for >
     reg = '.*' + t1 + t2 + t3 + t4 + '.*'
-    matches = []
-    for i, x in enumerate(data.url.str.match(reg)):
-        if x:
-            matches.append(data.iloc[i])
-    return pd.DataFrame(matches)
+    return match_regex(data, data.url, [reg])
+
+def filter_sqli(data):
+    reg = '.*' + '.*'
+    return match_regex(data, data.url, reg)
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
