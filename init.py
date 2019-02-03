@@ -243,10 +243,24 @@ def filter_csrf(data):
     reg = doc + '|' + none + '|' + google
     return match_regex(data, data.referrer, [reg], True)
 
+# checks for known scanning tools
+def filter_dangerous_user_agents(data, path):
+    file = open(path, "r")
+    agents = []
+    for line in file:
+        line = line.rstrip()
+        if line != '' and line[0] != '#':
+            agents.append(line)
+    reg = '|'.join(agents)
+    return match_regex(data, data.user_agent, [reg])
+
+
+
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("../ssl-logs/")
+filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 #filter_csrf(data).to_csv('possible_csrf.csv', index=False)
 #filter_xss(data).to_csv('possible_xss.csv', index=False)
 #filter_sqli(data).to_csv('possible_sqli.csv', index=False)
