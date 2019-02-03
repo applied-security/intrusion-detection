@@ -202,6 +202,16 @@ def match_regex(data, column, rules, flip=False):
                 break
     return pd.DataFrame(result)
 
+def print_matches(num, threat):
+    if num > 0:
+        m = '[!] Found '
+        m += str(num)
+        m += ' instance of ' if num == 1 else ' instances of '
+        m += threat
+        print(m)
+    return
+
+
 # checks for any </...> patterns in the URL
 def filter_xss(data):
     c1 = '(%3C|<)'       # checks for <
@@ -209,8 +219,9 @@ def filter_xss(data):
     c3 = '[a-zA-Z0-9]+'  # checks for string in tag
     c4 = '(%3E|>)'       # checks for >
     reg = c1 + c2 + c3 + c4
-    return match_regex(data, data.url, [reg])
-
+    matches = match_regex(data, data.url, [reg])
+    print_matches(len(matches), 'XSS')
+    return matches
 # checks for different common patterns used in SQL-Injection attacks in the URL
 def filter_sqli(data):
     c1 = '(%27|\')'                    # checks for ' delimiter
@@ -227,12 +238,16 @@ def filter_sqli(data):
     r2 = c3 + c4 + c5        # detects delimiter after = (NOTE: this gives false-positives)
     r3 = c1 + c6 + c7        # detects ' followed by or | OR
     r4 = c1 + c8 + '|' + c9  # detects SQL keywords
-    return match_regex(data, data.url, [r1, r2, r3, r4])
+    matches = match_regex(data, data.url, [r1, r2, r3, r4])
+    print_matches(len(matches), 'SQL injection')
+    return matches
 
 # checks for references to a remote file in the URL
 def filter_remote_file_inclusion(data):
     reg = '(https?|ftp|php|data):'
-    return match_regex(data, data.url, [reg])
+    matches = match_regex(data, data.url, [reg])
+    print_matches(len(matches), 'remote file inclusion')
+    return matches
 
 # checks for unknown referers
 # NOTE: Need to think of a smarter way to identify potentially dangerous referers
@@ -241,7 +256,9 @@ def filter_csrf(data):
     none = '-'
     google = 'https://www.google.'
     reg = doc + '|' + none + '|' + google
-    return match_regex(data, data.referrer, [reg], True)
+    matches = match_regex(data, data.referrer, [reg], True)
+    print_matches(len(matches), 'CSRF')
+    return matches
 
 # checks for known scanning tools
 def filter_dangerous_user_agents(data, path):
@@ -252,7 +269,9 @@ def filter_dangerous_user_agents(data, path):
         if line != '' and line[0] != '#':
             agents.append(line)
     reg = '|'.join(agents)
-    return match_regex(data, data.user_agent, [reg])
+    matches = match_regex(data, data.user_agent, [reg])
+    print_matches(len(matches), 'scanning tools')
+    return matches
 
 
 
@@ -261,11 +280,11 @@ def filter_dangerous_user_agents(data, path):
 blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("../ssl-logs/")
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
-#filter_csrf(data).to_csv('possible_csrf.csv', index=False)
-#filter_xss(data).to_csv('possible_xss.csv', index=False)
-#filter_sqli(data).to_csv('possible_sqli.csv', index=False)
-#filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
-#filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
-#filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
-#filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
-#filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
+filter_csrf(data).to_csv('possible_csrf.csv', index=False)
+filter_xss(data).to_csv('possible_xss.csv', index=False)
+filter_sqli(data).to_csv('possible_sqli.csv', index=False)
+filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
+filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
+filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
+filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
