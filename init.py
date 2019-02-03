@@ -20,7 +20,7 @@ FIELD_ORDER = [
                                       #    'url'      e.g. /article1.html
                                       #    'protocol' e.g. HTTP/1.1
                 'response_code',      # e.g. 404
-                'response_bytes',    # number of bytes returned
+                'response_bytes',     # number of bytes returned
                 'referrer',           # e.g. "https://www.doc.ic.ac.uk/"
                 'user_agent',
                 'tls',                # e.g. TLSv1.2
@@ -188,8 +188,11 @@ def filter_blacklisted_addresses(data, blacklist):
 
 # Takes the data variable, column to compare and an array of regex rules and returns
 # any records in data that match at least one of the rules
-def match_regex(data, column, rules):
-    tmp = [column.str.contains(rule, regex=True) for rule in rules]
+def match_regex(data, column, rules, flip=False):
+    if flip:
+        tmp = [~column.str.contains(rule, regex=True) for rule in rules]
+    else:
+        tmp = [column.str.contains(rule, regex=True) for rule in rules]
     matches = [[m[i] for m in tmp] for i in range(len(tmp[0]))]  # Bool[][]
     result = []
     for i in range(len(matches)):
@@ -231,14 +234,24 @@ def filter_remote_file_inclusion(data):
     reg = '(https?|ftp|php|data):'
     return match_regex(data, data.url, [reg])
 
+# checks for unknown referers
+# NOTE: Need to think of a smarter way to identify potentially dangerous referers
+def filter_csrf(data):
+    doc = 'www.doc.ic.ac.uk'
+    none = '-'
+    google = 'https://www.google.'
+    reg = doc + '|' + none + '|' + google
+    return match_regex(data, data.referrer, [reg], True)
+
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("../ssl-logs/")
-filter_xss(data).to_csv('possible_xss.csv', index=False)
-filter_sqli(data).to_csv('possible_sqli.csv', index=False)
-filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
-filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
-filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
-filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
-filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
+#filter_csrf(data).to_csv('possible_csrf.csv', index=False)
+#filter_xss(data).to_csv('possible_xss.csv', index=False)
+#filter_sqli(data).to_csv('possible_sqli.csv', index=False)
+#filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
+#filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
+#filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
+#filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+#filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
