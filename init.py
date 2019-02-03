@@ -190,9 +190,8 @@ def filter_blacklisted_addresses(data, blacklist):
 # any records in data that match at least one of the rules
 def match_regex(data, column, rules):
     tmp = [column.str.match(rule) for rule in rules]
-    matches = [[m[i] for m in tmp] for i in range(len(tmp[0]))]
+    matches = [[m[i] for m in tmp] for i in range(len(tmp[0]))]  # Bool[][]
     result = []
-    i = 0
     for i in range(len(matches)):
         for m in matches[i]:
             if m:
@@ -200,24 +199,39 @@ def match_regex(data, column, rules):
                 break
     return pd.DataFrame(result)
 
-# checks for any </...> patterns in the url and will add to the file: 'possible_xss.csv'
+# checks for any </...> patterns in the URL
 def filter_xss(data):
-    t1 = '((\%3C)|<)'    # checks for <
-    t2 = '((\%2F)|\/)*'  # checks for /
-    t3 = '[a-z0-9\%]+'   # checks for string in tag
-    t4 = '((\%3E)|>)'    # checks for >
-    reg = '.*' + t1 + t2 + t3 + t4 + '.*'
+    c1 = '((\%3C) | <)'    # checks for <
+    c2 = '((\%2F) | \/)*'  # checks for /
+    c3 = '[a-z0-9\%]+'     # checks for string in tag
+    c4 = '((\%3E) | >)'    # checks for >
+    reg = '.*' + c1 + c2 + c3 + c4 + '.*'
     return match_regex(data, data.url, [reg])
 
+# checks for different common patterns used in SQL-Injection attacks in the URL
 def filter_sqli(data):
-    reg = '.*' + '.*'
-    return match_regex(data, data.url, reg)
+    c1 = '((\%27) | \')'                           # checks for ' delimiter
+    c2 = '((\%23) | # | (--))'                     # checks for comments
+    c3 = '((\%3D) | =)'                            # checks for =
+    c4 = '[^\n]*'                                  # checks for 0+ new lines
+    c5 = '(' + c1 + ' | -- | (\%3B) | ;)'          # checks for ; / -- / '
+    c6 = '(\s | (\%20))*'                          # checks for 0+ whitespaces
+    c7 = '((\%6F)|o|O|(\%4F))((\%72)|r|R|(\%52))'  # checks for or | OR
+    c8 = '(select|union|insert|update|delete|replace|truncate)'  # checks for SQL keywords
+    c9 = c8.upper()
+
+    r1 = '.*' + c1 + '|' + c2 + '.*'       # detects escape character in url
+    r2 = '.*' + c3 + c4 + c5 + '.*'        # detects delimiter after =
+    r3 = '.*' + c1 + c6 + c7 + '.*'        # detects ' followed by or | OR
+    r4 = '.*' + c1 + c8 + '|' + c9 + '.*'  # detects SQL keywords
+    return match_regex(data, data.url, [r1, r2, r3, r4])
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
 data = parse_files_into_database("../ssl-logs/")
 filter_xss(data).to_csv('possible_xss.csv', index=False)
+filter_sqli(data).to_csv('possible_sqli.csv', index=False)
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
