@@ -3,9 +3,12 @@ import pandas as pd
 import pandasql
 import numpy as np
 import os
+import sys
 import socket
 from urllib.request import Request, urlopen
 from tqdm import tqdm
+import code
+import collections
 sql = pandasql.PandaSQL()
 
 FIELD_ORDER = [
@@ -273,12 +276,49 @@ def filter_dangerous_user_agents(data, path):
     print_matches(len(matches), 'scanning tools')
     return matches
 
+def mark_ddos_traffic(data):
+  SM_LIMIT = 5
+  MD_LIMIT = 300
+  LG_LIMIT = 2000
+  ddos_rows = []
+
+  last_found = 0
+  dump_buffer = collections.deque(100 * [0], 100)
+
+  small = collections.deque(100 * [0], 100)
+  med = collections.deque(1000 * [0], 1000)
+  large = collections.deque(10000 * [0], 10000)
+  for index, row in data.iterrows():
+    dump_buffer.appendleft(row)
+
+    time = datetime.strptime(row.time, "%H:%M:%S")
+    small.appendleft(time)
+    med.appendleft(time)
+    large.appendleft(time)
+
+    if index > 10000 and index % 100 == 0:
+      smdelta = abs((small[-1] - small[0]).total_seconds())
+      meddelta = abs((med[-1] - med[0]).total_seconds())
+      lgdelta = abs((large[-1] - large[0]).total_seconds())
+
+      if smdelta < SM_LIMIT or meddelta < MD_LIMIT or lgdelta < LG_LIMIT:
+        if index > last_found + 100:
+          ddos_rows += list(dump_buffer)
+          last_found = index
+        print('[!] Found a potential ddos attack.', '100 in', smdelta, '1000 in ', meddelta, '10000 in', lgdelta)
+
+      if index % 1000 == 0:
+        sys.stdout.write("Small: %5d  Med: %5d  Large: %10d  %%\r" % (smdelta, meddelta, lgdelta))
+        sys.stdout.flush()
+
+  return pd.DataFrame(ddos_rows)
 
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
-data = parse_files_into_database("../ssl-logs/")
+data = parse_files_into_database("/homes/ih1115/ssl-logs")
+mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_csrf(data).to_csv('possible_csrf.csv', index=False)
 filter_xss(data).to_csv('possible_xss.csv', index=False)
