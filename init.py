@@ -341,6 +341,7 @@ def mark_ddos_traffic(data):
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
 # all logs can be found at /homes/ih1115/ssl-logs
+# a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
 data = parse_files_into_database("/homes/ih1115/ssl-logs")
 mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
