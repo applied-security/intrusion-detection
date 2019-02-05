@@ -45,6 +45,17 @@ BLACKLIST_IP_SOURCE_URLS = [
                               # 'http://hosts-file.net/rss.asp'                                           # MalWareBytes
                            ]
 
+# use this map to verify bots
+# e.g. if the key is within the useragent field then check that the value is in the hostname
+USER_AGENT_HOSTNAME_MAP = {
+                            'yandex': 'yandex',
+                            'googlebot': 'googlebot',
+                            'semrushbot': 'semrush',
+                            'bingbot': 'msn',
+                            'changedetection', 'changedetection',
+                            'piplbot': 'pipl'
+                          }
+
 def parse_line(line):
   # first tokenise by spaces
   obj = {}
