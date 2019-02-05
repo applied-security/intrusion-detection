@@ -46,13 +46,13 @@ BLACKLIST_IP_SOURCE_URLS = [
                            ]
 
 # use this map to verify bots
-# e.g. if the key is within the useragent field then check that the value is in the hostname
+# e.g. if the key is within the user_agent field then check that the value is in the hostname
 USER_AGENT_HOSTNAME_MAP = {
                             'yandex': 'yandex',
                             'googlebot': 'googlebot',
                             'semrushbot': 'semrush',
                             'bingbot': 'msn',
-                            'changedetection', 'changedetection',
+                            'changedetection': 'changedetection',
                             'piplbot': 'pipl'
                           }
 
@@ -179,15 +179,16 @@ def calculate_average_requests_per_day(data):
   number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
 
-def filter_requests_by_yandex_useragent(data):
-  return sql('select * from data where user_agent like "%%yandex%%"')
+def user_agent_to_crawler_name(user_agent):
+  for bot in USER_AGENT_HOSTNAME_MAP:
+    print(bot)
 
 # finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
 # optimise: use a transposition table (fixed size hash table), a single ip address occur many times
 # optimise: E.G. convert ip address to hex and then perform (HEX % 20000) to check before you calculate the index of the array to cache it in
-def filter_fake_yandex_bots(data):
-  yandex_requests = filter_requests_by_yandex_useragent(data)
-  for index, row in yandex_requests.iterrows():
+def filter_fake_crawler_bots(data):
+  for index, row in data.iterrows():
+    crawler = user_agent_to_crawler_name(row["user_agent"])
     try:
       if "yandex" in socket.gethostbyaddr(row["address"])[0]:
         # we are only keeping the bad ones
@@ -338,4 +339,4 @@ filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=Fal
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
-filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
+# filter_fake_crawler_bots('fake_yandex_bot.csv', index=False)
