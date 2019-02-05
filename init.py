@@ -181,22 +181,32 @@ def calculate_average_requests_per_day(data):
 
 def user_agent_to_crawler_name(user_agent):
   for bot in USER_AGENT_HOSTNAME_MAP:
-    print(bot)
+    if bot in user_agent.lower():
+      return USER_AGENT_HOSTNAME_MAP[bot]
+  return ""
 
 # finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
 # optimise: use a transposition table (fixed size hash table), a single ip address occur many times
 # optimise: E.G. convert ip address to hex and then perform (HEX % 20000) to check before you calculate the index of the array to cache it in
 def filter_fake_crawler_bots(data):
+  violations = []
   for index, row in data.iterrows():
-    crawler = user_agent_to_crawler_name(row["user_agent"])
+    crawler_name = user_agent_to_crawler_name(row["user_agent"])
+
+    # ignore rows which are not related to a crawler
+    if crawler_name == "":
+      continue
+
+    # verify crawlers user agent matches host name
     try:
-      if "yandex" in socket.gethostbyaddr(row["address"])[0]:
-        # we are only keeping the bad ones
-        yandex_requests.drop(index, inplace=True)
+      if USER_AGENT_HOSTNAME_MAP[crawler_name] not in socket.gethostbyaddr(row["address"])[0]:
+        violations.append(data.iloc[index])
     except:
-      # if we fail then the ip address prolly invalid so just drop it?
-      print("[!] Could not resolve (" + row["address"] + '), flagging!..')
-  return yandex_requests
+      # if we fail to resolve ip address then flag?
+      violations.append(data.iloc[index])
+      # print("[!] Could not resolve (" + row["address"] + '), flagging!..')
+      pass
+  return pd.DataFrame(violations)
 
 def filter_blacklisted_addresses(data, blacklist):
   return sql('select * from data where address in (select address from blacklist)')
@@ -329,6 +339,7 @@ def mark_ddos_traffic(data):
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
+# all logs can be found at /homes/ih1115/ssl-logs
 data = parse_files_into_database("/homes/ih1115/ssl-logs")
 mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
@@ -339,4 +350,5 @@ filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=Fal
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
-# filter_fake_crawler_bots('fake_yandex_bot.csv', index=False)
+filter_fake_crawler_bots(data).to_csv('possible_fake_bots.csv', index=False)
+
