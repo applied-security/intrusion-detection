@@ -227,6 +227,7 @@ def match_regex(data, column, rules, flip=False):
                 break
     return pd.DataFrame(result)
 
+# Simple output for the number of a threat found by the system
 def print_matches(num, threat):
     if num > 0:
         m = '[!] Found '
