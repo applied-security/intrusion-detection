@@ -3,9 +3,12 @@ import pandas as pd
 import pandasql
 import numpy as np
 import os
+import sys
 import socket
 from urllib.request import Request, urlopen
 from tqdm import tqdm
+import code
+import collections
 sql = pandasql.PandaSQL()
 
 FIELD_ORDER = [
@@ -41,6 +44,17 @@ BLACKLIST_IP_SOURCE_URLS = [
                               'http://malc0de.com/bl/IP_Blacklist.txt'                                 # malc0de
                               # 'http://hosts-file.net/rss.asp'                                           # MalWareBytes
                            ]
+
+# use this map to verify bots
+# e.g. if the key is within the user_agent field then check that the value is in the hostname
+USER_AGENT_HOSTNAME_MAP = {
+                            'yandex': 'yandex',
+                            'googlebot': 'googlebot',
+                            'semrushbot': 'semrush',
+                            'bingbot': 'msn',
+                            'changedetection': 'changedetection',
+                            'piplbot': 'pipl'
+                          }
 
 def parse_line(line):
   # first tokenise by spaces
@@ -165,15 +179,16 @@ def calculate_average_requests_per_day(data):
   number_of_days = sql('select count(distinct(day)) as number_of_days from data')['number_of_days'][0]
   return sql('select (count(*) / ' + str(number_of_days) + ') as average from data')['average'][0]
 
-def filter_requests_by_yandex_useragent(data):
-  return sql('select * from data where user_agent like "%%yandex%%"')
+def user_agent_to_crawler_name(user_agent):
+  for bot in USER_AGENT_HOSTNAME_MAP:
+    print(bot)
 
 # finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
 # optimise: use a transposition table (fixed size hash table), a single ip address occur many times
 # optimise: E.G. convert ip address to hex and then perform (HEX % 20000) to check before you calculate the index of the array to cache it in
-def filter_fake_yandex_bots(data):
-  yandex_requests = filter_requests_by_yandex_useragent(data)
-  for index, row in yandex_requests.iterrows():
+def filter_fake_crawler_bots(data):
+  for index, row in data.iterrows():
+    crawler = user_agent_to_crawler_name(row["user_agent"])
     try:
       if "yandex" in socket.gethostbyaddr(row["address"])[0]:
         # we are only keeping the bad ones
@@ -274,12 +289,49 @@ def filter_dangerous_user_agents(data, path):
     print_matches(len(matches), 'scanning tools')
     return matches
 
+def mark_ddos_traffic(data):
+  SM_LIMIT = 5
+  MD_LIMIT = 300
+  LG_LIMIT = 2000
+  ddos_rows = []
+
+  last_found = 0
+  dump_buffer = collections.deque(100 * [0], 100)
+
+  small = collections.deque(100 * [0], 100)
+  med = collections.deque(1000 * [0], 1000)
+  large = collections.deque(10000 * [0], 10000)
+  for index, row in data.iterrows():
+    dump_buffer.appendleft(row)
+
+    time = datetime.strptime(row.time, "%H:%M:%S")
+    small.appendleft(time)
+    med.appendleft(time)
+    large.appendleft(time)
+
+    if index > 10000 and index % 100 == 0:
+      smdelta = abs((small[-1] - small[0]).total_seconds())
+      meddelta = abs((med[-1] - med[0]).total_seconds())
+      lgdelta = abs((large[-1] - large[0]).total_seconds())
+
+      if smdelta < SM_LIMIT or meddelta < MD_LIMIT or lgdelta < LG_LIMIT:
+        if index > last_found + 100:
+          ddos_rows += list(dump_buffer)
+          last_found = index
+        print('[!] Found a potential ddos attack.', '100 in', smdelta, '1000 in ', meddelta, '10000 in', lgdelta)
+
+      if index % 1000 == 0:
+        sys.stdout.write("Small: %5d  Med: %5d  Large: %10d  %%\r" % (smdelta, meddelta, lgdelta))
+        sys.stdout.flush()
+
+  return pd.DataFrame(ddos_rows)
 
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
 blacklist = fetch_blacklisted_addresses()
-data = parse_files_into_database("../ssl-logs/")
+data = parse_files_into_database("/homes/ih1115/ssl-logs")
+mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_csrf(data).to_csv('possible_csrf.csv', index=False)
 filter_xss(data).to_csv('possible_xss.csv', index=False)
@@ -288,4 +340,4 @@ filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=Fal
 filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
-filter_fake_yandex_bots(data).to_csv('fake_yandex_bot.csv', index=False)
+# filter_fake_crawler_bots('fake_yandex_bot.csv', index=False)
