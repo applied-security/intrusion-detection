@@ -147,14 +147,17 @@ def parse_files_into_database(root):
 def fetch_blacklisted_addresses_from(url):
   blacklist = []
   print('[~] Fetching blacklisted addresses from ' + url)
-  request = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-  contents = urlopen(request).read().decode('utf-8')
-  lines = contents.split('\n')
-  for line in lines:
-    # ignore comments and empty lines
-    if "//" in line or line == "":
-      continue
-    blacklist.append(line.strip())
+  try:
+    request = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    contents = urlopen(request).read().decode('utf-8')
+    lines = contents.split('\n')
+    for line in lines:
+      # ignore comments and empty lines
+      if "//" in line or line == "":
+        continue
+      blacklist.append(line.strip())
+  except:
+    print('[!] Failed to fetch ' + url)    
   return blacklist
 
 def fetch_blacklisted_addresses():
