@@ -202,13 +202,23 @@ def filter_fake_crawler_bots(data):
 
     # verify crawlers user agent matches host name
     try:
-      if USER_AGENT_HOSTNAME_MAP[crawler_name] not in socket.gethostbyaddr(row["address"])[0]:
+      resolved_domain_name = socket.gethostbyaddr(row["address"])[0]
+      # check the hostname is valid
+      if USER_AGENT_HOSTNAME_MAP[crawler_name] not in resolved_domain_name:
         violations.append(data.iloc[index])
+        continue
+
+      # Run a forward DNS lookup on the host name retrieved to make sure the ip is the same
+      resolved_ip_address = socket.gethostbyaddr(resolved_domain_name)[2]
+      if row["address"] not in resolved_ip_address:
+        violations.append(data.iloc[index])
+        continue
+
     except:
-      # if we fail to resolve ip address then flag?
       violations.append(data.iloc[index])
-      # print("[!] Could not resolve (" + row["address"] + '), flagging!..')
-      pass
+      continue
+
+
   print_matches(len(violations), 'fake bots')
   return pd.DataFrame(violations)
 
@@ -347,7 +357,7 @@ blacklist = fetch_blacklisted_addresses()
 # all logs can be found at /homes/ih1115/ssl-logs
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
 data = parse_files_into_database("/homes/ih1115/ssl-logs")
-#data = parse_files_into_database("../ssl-logs")
+# data = parse_files_into_database("../ssl-logs")
 mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_csrf(data).to_csv('possible_csrf.csv', index=False)
