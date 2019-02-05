@@ -262,12 +262,12 @@ def filter_sqli(data):
     c7 = '(%6F|o|O|%4F)(%72|r|R|%52)'  # checks for or | OR
     c8 = '(select|union|insert|update|delete|replace|truncate)'  # checks for SQL keywords
     c9 = c8.upper()
-
-    r1 = c1 + '|' + c2       # detects escape character in url
-    r2 = c3 + c4 + c5        # detects delimiter after = (NOTE: this gives false-positives)
-    r3 = c1 + c6 + c7        # detects ' followed by or | OR
-    r4 = c1 + c8 + '|' + c9  # detects SQL keywords
-    matches = match_regex(data, data.url, [r1, r2, r3, r4])
+    rules = []
+    rules.append(c1 + '|' + c2)       # detects escape character in url
+    rules.append(c3 + c4 + c5)        # detects delimiter after = (NOTE: this gives false-positives)
+    rules.append(c1 + c6 + c7)        # detects ' followed by or | OR
+    rules.append(c1 + c8 + '|' + c9)  # detects SQL keywords
+    matches = match_regex(data, data.url, rules)
     print_matches(len(matches), 'SQL injection')
     return matches
 
@@ -346,6 +346,7 @@ blacklist = fetch_blacklisted_addresses()
 # all logs can be found at /homes/ih1115/ssl-logs
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
 data = parse_files_into_database("/homes/ih1115/ssl-logs")
+#data = parse_files_into_database("../ssl-logs")
 mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
 filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_csrf(data).to_csv('possible_csrf.csv', index=False)
