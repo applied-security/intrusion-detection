@@ -185,7 +185,7 @@ def calculate_average_requests_per_day(data):
 def user_agent_to_crawler_name(user_agent):
   for bot in USER_AGENT_HOSTNAME_MAP:
     if bot in user_agent.lower():
-      return USER_AGENT_HOSTNAME_MAP[bot]
+      return bot
   return ""
 
 # finds user agents of yandex and reverse dns look up to see if they are legimate yandex bots
@@ -209,6 +209,7 @@ def filter_fake_crawler_bots(data):
       violations.append(data.iloc[index])
       # print("[!] Could not resolve (" + row["address"] + '), flagging!..')
       pass
+  print_matches(len(violations), 'fake bots')
   return pd.DataFrame(violations)
 
 def filter_blacklisted_addresses(data, blacklist):
