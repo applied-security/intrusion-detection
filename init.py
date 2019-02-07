@@ -232,7 +232,7 @@ def filter_blacklisted_addresses(data, blacklist):
 
 # Takes the data variable, column to compare and an array of regex rules and returns
 # any records in data that match at least one of the rules
-def match_regex(data, column, rules, flip=False):
+def match_regex(data, column, rules, reason, flip=False):
     if flip:
         tmp = [~column.str.contains(rule, regex=True) for rule in rules]
     else:
@@ -244,7 +244,9 @@ def match_regex(data, column, rules, flip=False):
             if m:
                 result.append(data.iloc[i])
                 break
-    return pd.DataFrame(result)
+    result = pd.DataFrame(result)
+    result['reason'] = reason
+    return result
 
 # Simple output for the number of a threat found by the system
 def print_matches(num, threat):
@@ -264,7 +266,7 @@ def filter_xss(data):
     c3 = '[a-zA-Z0-9]+'  # checks for string in tag
     c4 = '(%3E|>)'       # checks for >
     reg = c1 + c2 + c3 + c4
-    matches = match_regex(data, data.url, [reg])
+    matches = match_regex(data, data.url, [reg], 'XSS')
     print_matches(len(matches), 'XSS')
     return matches
 # checks for different common patterns used in SQL-Injection attacks in the URL
@@ -286,14 +288,14 @@ def filter_sqli(data):
         rules.append(c1 + '|' + c2)   # detects escape character in url
     elif (config.SQLI_SENSITIVITY == 2):
         rules.append(c1 + '|' + c2)   # detects escape character in url
-    matches = match_regex(data, data.url, rules)
+    matches = match_regex(data, data.url, rules, 'SQL Injection')
     print_matches(len(matches), 'SQL injection')
     return matches
 
 # checks for references to a remote file in the URL
 def filter_remote_file_inclusion(data):
     reg = '(https?|ftp|php|data):'
-    matches = match_regex(data, data.url, [reg])
+    matches = match_regex(data, data.url, [reg], 'Remote File Inclusion')
     print_matches(len(matches), 'remote file inclusion')
     return matches
 
@@ -304,7 +306,7 @@ def filter_csrf(data):
     none = '-'
     google = 'https://www.google.'
     reg = doc + '|' + none + '|' + google
-    matches = match_regex(data, data.referrer, [reg], True)
+    #matches = match_regex(data, data.referrer, [reg], True)
     print_matches(len(matches), 'CSRF')
     return matches
 
@@ -317,7 +319,7 @@ def filter_scanning_tools(data, path):
         if line != '' and line[0] != '#':
             agents.append(line)
     reg = '|'.join(agents)
-    matches = match_regex(data, data.user_agent, [reg])
+    matches = match_regex(data, data.user_agent, [reg], 'Scanning Tool')
     print_matches(len(matches), 'scanning tools')
     return matches
 
@@ -367,19 +369,19 @@ def mark_ddos_traffic(data):
 blacklist = fetch_blacklisted_addresses()
 # all logs can be found at /homes/ih1115/ssl-logs
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
-data = parse_files_into_database("/homes/ih1115/ssl-logs")
+data = parse_files_into_database("/homes/ih1115/min-ssl-logs")
 # data = parse_files_into_database("../ssl-logs")
 
 # Signature
-filter_scanning_tools(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
+#filter_scanning_tools(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_xss(data).to_csv('possible_xss.csv', index=False)
-filter_sqli(data).to_csv('possible_sqli.csv', index=False)
-filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
-filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
-filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+#filter_sqli(data).to_csv('possible_sqli.csv', index=False)
+#filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
+#filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
+#filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
 
 # Anaomoly
-mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
-filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
-filter_fake_crawler_bots(data).to_csv('possible_fake_bots.csv', index=False)
+#mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
+#filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
+#filter_fake_crawler_bots(data).to_csv('possible_fake_bots.csv', index=False)
 
