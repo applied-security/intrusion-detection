@@ -356,30 +356,37 @@ def mark_ddos_traffic(data):
   return result
 
 
+def run_signature_checks(data):
+  signature_results = pd.DataFrame()
+  signature_results = pd.concat([signature_results, filter_scanning_tools(data, "scanners-user-agents.data")], ignore_index=True, sort=False)
+  signature_results = pd.concat([signature_results, filter_xss(data)], ignore_index=True, sort=False)
+  signature_results = pd.concat([signature_results, filter_sqli(data)], ignore_index=True, sort=False)
+  signature_results = pd.concat([signature_results, filter_remote_file_inclusion(data)], ignore_index=True, sort=False)
+  signature_results = pd.concat([signature_results, filter_requests_with_no_useragent(data)], ignore_index=True, sort=False)
+  signature_results = pd.concat([signature_results, filter_requests_with_no_referrer(data)], ignore_index=True, sort=False)
+  sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from signature_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('signature_results.csv', index=False)
+
+def run_anomalous_checks(data):
+  blacklist = fetch_blacklisted_addresses()
+  anomalous_results = pd.DataFrame()
+  anomalous_results = pd.concat([anomalous_results, mark_ddos_traffic(data)], ignore_index=True, sort=False)
+  anomalous_results = pd.concat([anomalous_results, filter_blacklisted_addresses(data, blacklist)], ignore_index=True, sort=False)
+  anomalous_results = pd.concat([anomalous_results, filter_fake_crawler_bots(data)], ignore_index=True, sort=False)
+  sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from anomalous_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('anomalous_results.csv', index=False)
+
+
 # a good idea would be to only have a few log files when testing / developing for quick feedback
 # if memory error, consider using 64 bit version of python or buy more ram :)
-blacklist = fetch_blacklisted_addresses()
+
 # all logs can be found at /homes/ih1115/ssl-logs
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
-data = parse_files_into_database("/homes/ih1115/ssl-logs")
-# data = parse_files_into_database("../ssl-logs")
-
-
-# Signature
-signature_results = pd.DataFrame()
-signature_results = pd.concat([signature_results, filter_scanning_tools(data, "scanners-user-agents.data")], ignore_index=True, sort=False)
-signature_results = pd.concat([signature_results, filter_xss(data)], ignore_index=True, sort=False)
-signature_results = pd.concat([signature_results, filter_sqli(data)], ignore_index=True, sort=False)
-signature_results = pd.concat([signature_results, filter_remote_file_inclusion(data)], ignore_index=True, sort=False)
-signature_results = pd.concat([signature_results, filter_requests_with_no_useragent(data)], ignore_index=True, sort=False)
-signature_results = pd.concat([signature_results, filter_requests_with_no_referrer(data)], ignore_index=True, sort=False)
-# TODO: i actually am 50% sure this isn't guranteed to pick the correct reason
-sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from signature_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('signature_results.csv', index=False)
-
-# Anomaly
-anomaly_results = pd.DataFrame()
-anomaly_results = pd.concat([anomaly_results, mark_ddos_traffic(data)], ignore_index=True, sort=False)
-anomaly_results = pd.concat([anomaly_results, filter_blacklisted_addresses(data, blacklist)], ignore_index=True, sort=False)
-anomaly_results = pd.concat([anomaly_results, filter_fake_crawler_bots(data)], ignore_index=True, sort=False)
-# TODO: i actually am 50% sure this isn't guranteed to pick the correct reason
-sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from signature_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('signature_results.csv', index=False)
+data = parse_files_into_database(sys.argv[1])
+if sys.argv[2] == "0":
+  run_signature_checks(data)
+  run_anomalous_checks(data)
+elif sys.argv[2] == "1":
+  run_signature_checks(data)
+elif sys.argv[2] == "2":
+  run_anomalous_checks(data)
+else:
+  print("Unexpected argument!")
