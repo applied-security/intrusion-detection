@@ -217,7 +217,8 @@ def filter_fake_crawler_bots(data):
         continue
 
     except:
-      violations.append(data.iloc[index])
+      # If resolving fails or throws exception then we will ignore this
+      # violations.append(data.iloc[index])
       continue
 
 
@@ -306,7 +307,7 @@ def filter_csrf(data):
     return matches
 
 # checks for known scanning tools
-def filter_dangerous_user_agents(data, path):
+def filter_scanning_tools(data, path):
     file = open(path, "r")
     agents = []
     for line in file:
@@ -363,14 +364,17 @@ blacklist = fetch_blacklisted_addresses()
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
 data = parse_files_into_database("/homes/ih1115/ssl-logs")
 # data = parse_files_into_database("../ssl-logs")
-mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
-filter_dangerous_user_agents(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
-filter_csrf(data).to_csv('possible_csrf.csv', index=False)
+
+# Signature
+filter_scanning_tools(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
 filter_xss(data).to_csv('possible_xss.csv', index=False)
 filter_sqli(data).to_csv('possible_sqli.csv', index=False)
 filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
-filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
 filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+
+# Anaomoly
+mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
+filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
 filter_fake_crawler_bots(data).to_csv('possible_fake_bots.csv', index=False)
 
