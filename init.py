@@ -172,10 +172,10 @@ def fetch_blacklisted_addresses():
   return pd.DataFrame({'address': list(set(blacklist))}) # first removes duplicates by using set
 
 def filter_requests_with_no_useragent(data):
-  return sql('select * from data where user_agent = "-"')
+  return sql('select *, "no user agent" as reason from data where user_agent = "-"')
 
 def filter_requests_with_no_referrer(data):
-  return sql('select * from data where referrer = "-"')
+  return sql('select *, "no referrer" as reason from data where referrer = "-"')
 
 def calculate_total_requests_per_day(data):
   return sql('select count(*) as requests, day from data group by day')
@@ -223,10 +223,12 @@ def filter_fake_crawler_bots(data):
 
 
   print_matches(len(violations), 'fake bots')
-  return pd.DataFrame(violations)
+  result = pd.DataFrame(violations)
+  result['reason'] = 'fake bots'
+  return result
 
 def filter_blacklisted_addresses(data, blacklist):
-  return sql('select * from data where address in (select address from blacklist)')
+  return sql('select *, "blacklisted address" as reason from data where address in (select address from blacklist)')
 
 # Takes the data variable, column to compare and an array of regex rules and returns
 # any records in data that match at least one of the rules
@@ -354,7 +356,10 @@ def mark_ddos_traffic(data):
         sys.stdout.write("Small: %5d  Med: %5d  Large: %10d  %%\r" % (smdelta, meddelta, lgdelta))
         sys.stdout.flush()
 
-  return pd.DataFrame(ddos_rows)
+
+  result = pd.DataFrame(ddos_rows)
+  result['reason'] = 'DDOS'
+  return result
 
 
 # a good idea would be to only have a few log files when testing / developing for quick feedback
