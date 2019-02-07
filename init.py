@@ -351,7 +351,7 @@ def mark_ddos_traffic(data):
         ddos_rows += list(dump_buffer)
         ip_hits += 1
         if ip_hits % 400 == 0:
-          print('[!] 400 IPs made 100 requests in under a minue')
+          print('[!] 400 IPs made 100 requests in under a minute')
 
     if index > 10000 and index % 100 == 0:
       smdelta = abs((small[-1] - small[0]).total_seconds())
