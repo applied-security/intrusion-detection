@@ -9,6 +9,8 @@ from urllib.request import Request, urlopen
 from tqdm import tqdm
 import code
 import collections
+import config
+
 sql = pandasql.PandaSQL()
 
 FIELD_ORDER = [
@@ -274,10 +276,13 @@ def filter_sqli(data):
     c8 = '(select|union|insert|update|delete|replace|truncate)'  # checks for SQL keywords
     c9 = c8.upper()
     rules = []
-    rules.append(c1 + '|' + c2)       # detects escape character in url
-    rules.append(c3 + c4 + c5)        # detects delimiter after = (NOTE: this gives false-positives)
     rules.append(c1 + c6 + c7)        # detects ' followed by or | OR
     rules.append(c1 + c8 + '|' + c9)  # detects SQL keywords
+    if (config.SQLI_SENSITIVITY > 2):
+        rules.append(c3 + c4 + c5)    # detects delimiter after = (NOTE: this gives false-positives)
+        rules.append(c1 + '|' + c2)   # detects escape character in url
+    elif (config.SQLI_SENSITIVITY == 2):
+        rules.append(c1 + '|' + c2)   # detects escape character in url
     matches = match_regex(data, data.url, rules)
     print_matches(len(matches), 'SQL injection')
     return matches
