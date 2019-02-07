@@ -369,19 +369,23 @@ def mark_ddos_traffic(data):
 blacklist = fetch_blacklisted_addresses()
 # all logs can be found at /homes/ih1115/ssl-logs
 # a smaller set of these logs can be found at /homes/ih1115/min-ssl-logs
-data = parse_files_into_database("/homes/ih1115/min-ssl-logs")
+data = parse_files_into_database("/homes/ih1115/ssl-logs")
 # data = parse_files_into_database("../ssl-logs")
 
+
 # Signature
-#filter_scanning_tools(data, "scanners-user-agents.data").to_csv('scanning_tools.csv', index=False)
-filter_xss(data).to_csv('possible_xss.csv', index=False)
-#filter_sqli(data).to_csv('possible_sqli.csv', index=False)
-#filter_remote_file_inclusion(data).to_csv('remote_file_inclusion.csv', index=False)
-#filter_requests_with_no_useragent(data).to_csv('useragent_not_set.csv', index=False)
-#filter_requests_with_no_referrer(data).to_csv('referrer_not_set.csv', index=False)
+signature_results = pd.DataFrame()
+signature_results = pd.concat([signature_results, filter_scanning_tools(data, "scanners-user-agents.data")], ignore_index=True, sort=False)
+signature_results = pd.concat([signature_results, filter_xss(data)], ignore_index=True, sort=False)
+signature_results = pd.concat([signature_results, filter_sqli(data)], ignore_index=True, sort=False)
+signature_results = pd.concat([signature_results, filter_remote_file_inclusion(data)], ignore_index=True, sort=False)
+signature_results = pd.concat([signature_results, filter_requests_with_no_useragent(data)], ignore_index=True, sort=False)
+signature_results = pd.concat([signature_results, filter_requests_with_no_referrer(data)], ignore_index=True, sort=False)
+signature_results.to_csv('signature_results.csv', index=False)
 
-# Anaomoly
-#mark_ddos_traffic(data).to_csv('possible_ddos.csv', index=False)
-#filter_blacklisted_addresses(data, blacklist).to_csv('blacklisted_addresses.csv', index=False)
-#filter_fake_crawler_bots(data).to_csv('possible_fake_bots.csv', index=False)
-
+# Anomaly
+anomaly_results = pd.DataFrame()
+anomaly_results = pd.concat([anomaly_results, mark_ddos_traffic(data)], ignore_index=True, sort=False)
+anomaly_results = pd.concat([anomaly_results, filter_blacklisted_addresses(data, blacklist)], ignore_index=True, sort=False)
+anomaly_results = pd.concat([anomaly_results, filter_fake_crawler_bots(data)], ignore_index=True, sort=False)
+anomaly_results.to_csv('anomaly_results.csv', index=False)
