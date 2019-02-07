@@ -8,7 +8,7 @@ THREAT_SCORES = {
 	'xss': 9,
 	'sql_injection': 10,
 	'remote_file_inclusion': 7,
-	'scanning_tools': 5,
+	'scanning_tool': 5,
 	'no_user_agent': 6,
 	'fake_bot': 4,
 	'blacklisted_address': 3,

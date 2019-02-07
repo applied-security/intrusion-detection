@@ -247,6 +247,7 @@ def match_regex(data, column, rules, reason, flip=False):
                 break
     result = pd.DataFrame(result)
     result['reason'] = reason
+	result['score'] = config.THREAT_SCORES[reason]
     return result
 
 # Simple output for the number of a threat found by the system
@@ -267,7 +268,7 @@ def filter_xss(data):
     c3 = '[a-zA-Z0-9]+'  # checks for string in tag
     c4 = '(%3E|>)'       # checks for >
     reg = c1 + c2 + c3 + c4
-    matches = match_regex(data, data.url, [reg], 'XSS')
+    matches = match_regex(data, data.url, [reg], 'xss')
     print_matches(len(matches), 'XSS')
     return matches
 # checks for different common patterns used in SQL-Injection attacks in the URL
@@ -289,26 +290,15 @@ def filter_sqli(data):
         rules.append(c1 + '|' + c2)   # detects escape character in url
     elif (config.SQLI_SENSITIVITY == 2):
         rules.append(c1 + '|' + c2)   # detects escape character in url
-    matches = match_regex(data, data.url, rules, 'SQL Injection')
+    matches = match_regex(data, data.url, rules, 'sql_injection')
     print_matches(len(matches), 'SQL injection')
     return matches
 
 # checks for references to a remote file in the URL
 def filter_remote_file_inclusion(data):
     reg = '(https?|ftp|php|data):'
-    matches = match_regex(data, data.url, [reg], 'Remote File Inclusion')
+    matches = match_regex(data, data.url, [reg], 'remote_file_inclusion')
     print_matches(len(matches), 'remote file inclusion')
-    return matches
-
-# checks for unknown referers
-# NOTE: Need to think of a smarter way to identify potentially dangerous referers
-def filter_csrf(data):
-    doc = 'www.doc.ic.ac.uk'
-    none = '-'
-    google = 'https://www.google.'
-    reg = doc + '|' + none + '|' + google
-    #matches = match_regex(data, data.referrer, [reg], True)
-    print_matches(len(matches), 'CSRF')
     return matches
 
 # checks for known scanning tools
@@ -320,7 +310,7 @@ def filter_scanning_tools(data, path):
         if line != '' and line[0] != '#':
             agents.append(line)
     reg = '|'.join(agents)
-    matches = match_regex(data, data.user_agent, [reg], 'Scanning Tool')
+    matches = match_regex(data, data.user_agent, [reg], 'scanning_tool')
     print_matches(len(matches), 'scanning tools')
     return matches
 
@@ -361,7 +351,8 @@ def mark_ddos_traffic(data):
 
 
   result = pd.DataFrame(ddos_rows)
-  result['reason'] = 'DDOS'
+  result['reason'] = 'ddos'
+  result['score'] = config.THREAT_SCORES['ddos']
   return result
 
 
