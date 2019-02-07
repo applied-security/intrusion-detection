@@ -318,21 +318,40 @@ def mark_ddos_traffic(data):
   SM_LIMIT = 5
   MD_LIMIT = 300
   LG_LIMIT = 2000
+  PER_IP_LIMIT = 60
   ddos_rows = []
+  ddos_hits = 0
 
+  ip_hits = 0
   last_found = 0
   dump_buffer = collections.deque(100 * [0], 100)
 
+  ipbuffers = {}
+  ipindexes = {}
   small = collections.deque(100 * [0], 100)
   med = collections.deque(1000 * [0], 1000)
   large = collections.deque(10000 * [0], 10000)
   for index, row in data.iterrows():
     dump_buffer.appendleft(row)
 
+    if row.address not in ipbuffers:
+      ipbuffers[row.address] = collections.deque(100 * [0], 100)
+      ipindexes[row.address] = 0
+
     time = datetime.strptime(row.time, "%H:%M:%S")
     small.appendleft(time)
     med.appendleft(time)
     large.appendleft(time)
+    ipbuffers[row.address].appendleft(time)
+
+    if ipbuffers[row.address][-1] != 0:
+      ipbuffer = ipbuffers[row.address]
+      ipdelta = abs((ipbuffer[-1] - ipbuffer[0]).total_seconds())
+      if ipdelta < PER_IP_LIMIT and ipindexes[row.address] + 100 < index:
+        ddos_rows += list(dump_buffer)
+        ip_hits += 1
+        if ip_hits % 400 == 0:
+          print('[!] 400 IPs made 100 requests in under a minue')
 
     if index > 10000 and index % 100 == 0:
       smdelta = abs((small[-1] - small[0]).total_seconds())
@@ -343,7 +362,9 @@ def mark_ddos_traffic(data):
         if index > last_found + 100:
           ddos_rows += list(dump_buffer)
           last_found = index
-        print('[!] Found a potential ddos attack.', '100 in', smdelta, '1000 in ', meddelta, '10000 in', lgdelta)
+          ddos_hits += 1
+          if ddos_hits % 200 == 0:
+            print('[!] Found 200 potential ddos attacks.')
 
       if index % 1000 == 0:
         sys.stdout.write("Small: %5d  Med: %5d  Large: %10d  %%\r" % (smdelta, meddelta, lgdelta))
