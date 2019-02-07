@@ -172,10 +172,10 @@ def fetch_blacklisted_addresses():
   return pd.DataFrame({'address': list(set(blacklist))}) # first removes duplicates by using set
 
 def filter_requests_with_no_useragent(data):
-  return sql('select *, "no user agent" as reason from data where user_agent = "-"')
+  return sql('select *, "no user agent" as reason, ' + config.THREAT_SCORES['no_user_agent'] + ' as score from data where user_agent = "-"')
 
 def filter_requests_with_no_referrer(data):
-  return sql('select *, "no referrer" as reason from data where referrer = "-"')
+  return sql('select *, "no referrer" as reasonm ' + config.THREAT_SCORES['no_referrer'] + ' as score from data where referrer = "-"')
 
 def calculate_total_requests_per_day(data):
   return sql('select count(*) as requests, day from data group by day')
@@ -225,10 +225,11 @@ def filter_fake_crawler_bots(data):
   print_matches(len(violations), 'fake bots')
   result = pd.DataFrame(violations)
   result['reason'] = 'fake bots'
+  result['score'] = config.THREAT_SCORES['fake_bot']
   return result
 
 def filter_blacklisted_addresses(data, blacklist):
-  return sql('select *, "blacklisted address" as reason from data where address in (select address from blacklist)')
+  return sql('select *, "blacklisted address" as reason, ' + config.THREAT_SCORES['blacklisted_address'] + ' as score from data where address in (select address from blacklist)')
 
 # Takes the data variable, column to compare and an array of regex rules and returns
 # any records in data that match at least one of the rules
