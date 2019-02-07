@@ -172,10 +172,10 @@ def fetch_blacklisted_addresses():
   return pd.DataFrame({'address': list(set(blacklist))}) # first removes duplicates by using set
 
 def filter_requests_with_no_useragent(data):
-  return sql('select *, "no user agent" as reason, ' + config.THREAT_SCORES['no_user_agent'] + ' as score from data where user_agent = "-"')
+  return sql('select *, "no user agent" as reason, ' + str(config.THREAT_SCORES['no_user_agent']) + ' as score from data where user_agent = "-"')
 
 def filter_requests_with_no_referrer(data):
-  return sql('select *, "no referrer" as reasonm ' + config.THREAT_SCORES['no_referrer'] + ' as score from data where referrer = "-"')
+  return sql('select *, "no referrer" as reason, ' + str(config.THREAT_SCORES['no_referrer']) + ' as score from data where referrer = "-"')
 
 def calculate_total_requests_per_day(data):
   return sql('select count(*) as requests, day from data group by day')
@@ -229,7 +229,7 @@ def filter_fake_crawler_bots(data):
   return result
 
 def filter_blacklisted_addresses(data, blacklist):
-  return sql('select *, "blacklisted address" as reason, ' + config.THREAT_SCORES['blacklisted_address'] + ' as score from data where address in (select address from blacklist)')
+  return sql('select *, "blacklisted address" as reason, ' + str(config.THREAT_SCORES['blacklisted_address']) + ' as score from data where address in (select address from blacklist)')
 
 # Takes the data variable, column to compare and an array of regex rules and returns
 # any records in data that match at least one of the rules
@@ -247,7 +247,7 @@ def match_regex(data, column, rules, reason, flip=False):
                 break
     result = pd.DataFrame(result)
     result['reason'] = reason
-	result['score'] = config.THREAT_SCORES[reason]
+    result['score'] = config.THREAT_SCORES[reason]
     return result
 
 # Simple output for the number of a threat found by the system
@@ -373,11 +373,13 @@ signature_results = pd.concat([signature_results, filter_sqli(data)], ignore_ind
 signature_results = pd.concat([signature_results, filter_remote_file_inclusion(data)], ignore_index=True, sort=False)
 signature_results = pd.concat([signature_results, filter_requests_with_no_useragent(data)], ignore_index=True, sort=False)
 signature_results = pd.concat([signature_results, filter_requests_with_no_referrer(data)], ignore_index=True, sort=False)
-signature_results.to_csv('signature_results.csv', index=False)
+# TODO: i actually am 50% sure this isn't guranteed to pick the correct reason
+sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from signature_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('signature_results.csv', index=False)
 
 # Anomaly
 anomaly_results = pd.DataFrame()
 anomaly_results = pd.concat([anomaly_results, mark_ddos_traffic(data)], ignore_index=True, sort=False)
 anomaly_results = pd.concat([anomaly_results, filter_blacklisted_addresses(data, blacklist)], ignore_index=True, sort=False)
 anomaly_results = pd.concat([anomaly_results, filter_fake_crawler_bots(data)], ignore_index=True, sort=False)
-anomaly_results.to_csv('anomaly_results.csv', index=False)
+# TODO: i actually am 50% sure this isn't guranteed to pick the correct reason
+sql('select reason,max(score) as score,address,day,method,protocol,referrer,response_code,time,tls,url,user_agent from signature_results group by address,day,method,protocol,referrer,response_code,time,tls,url,user_agent').to_csv('signature_results.csv', index=False)
